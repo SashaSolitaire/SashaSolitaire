@@ -1,7 +1,7 @@
 - 👋 Hi, I’m @SashaSolitaire
 - 👀 I’m interested in traveling, photography, cycling and data
 - 🌱 I’m currently learning Python
-- 💞️ I’m looking to collaborate on ...
+- 💞️ I’m looking to collaborate on data collection and visualization from Enphase Envoy
 - 📫 How to reach me ...
 
 <!---
