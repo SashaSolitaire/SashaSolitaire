@@ -1,0 +1,141 @@
+import json
+import requests
+import threading
+from requests.auth import HTTPDigestAuth
+import datetime
+import pandas as pd
+import pyodbc
+
+# envoy-s host IP
+host = '<<ENVOY IP ADDRESS>>'
+# envoy installer password
+password = '<<INSTALLER PWD FOR ENVOY>>'
+
+# Dont' change the user name for the Envoy
+user = 'installer'
+auth = HTTPDigestAuth(user, password)
+marker = b'data: '
+
+dsn ="DRIVER={SQL SERVER};server=<<SQL SERVER IP ADDRESS>>;database=<<DB NAME>>;uid=<<SQL SERVER UID>>;pwd=<<SQL SERVER PWD>>"
+
+def scrape_stream():
+    while True:
+        try:
+            url = 'http://%s/stream/meter' % host
+            stream = requests.get(url, auth=auth, stream=True, timeout=5)
+            for line in stream.iter_lines():
+                if line.startswith(marker):
+                    currentDT = datetime.datetime.now()
+                    curr_date = (currentDT.strftime("%Y%m%d%H%M%S"))
+                    data = json.loads(line.replace(marker, b''))
+                    
+                    # Note that my system only has two phases
+                    # The elements below only cover "Ph-A" and "Ph-B"
+                    # If you have three phases and need to capture that, use the following template to add extra elements
+                    # prod_ph_c_wNow = data['production']['ph-c']['p']
+                    
+                    prod_ph_a_wNow = data['production']['ph-a']['p']
+                    prod_ph_a_ReactPower = data['production']['ph-a']['q']
+                    prod_ph_a_ApprntPower = data['production']['ph-a']['s']
+                    prod_ph_a_rmsVoltage = data['production']['ph-a']['v']
+                    prod_ph_a_rmsCurrent = data['production']['ph-a']['i']
+                    prod_ph_a_pwrFactor = data['production']['ph-a']['pf']
+                    prod_ph_a_Frequency = data['production']['ph-a']['f']
+                    prod_ph_b_wNow = data['production']['ph-b']['p']
+                    prod_ph_b_ReactPower = data['production']['ph-b']['q']
+                    prod_ph_b_ApprntPower = data['production']['ph-b']['s']
+                    prod_ph_b_rmsVoltage = data['production']['ph-b']['v']
+                    prod_ph_b_rmsCurrent = data['production']['ph-b']['i']
+                    prod_ph_b_pwrFactor = data['production']['ph-b']['pf']
+                    prod_ph_b_Frequency = data['production']['ph-b']['f']
+                    net_cons_ph_a_wNow = data['net-consumption']['ph-a']['p']
+                    net_cons_ph_a_ReactPower = data['net-consumption']['ph-a']['q']
+                    net_cons_ph_a_ApprntPower = data['net-consumption']['ph-a']['s']
+                    net_cons_ph_a_rmsVoltage = data['net-consumption']['ph-a']['v']
+                    net_cons_ph_a_rmsCurrent = data['net-consumption']['ph-a']['i']
+                    net_cons_ph_a_pwrFactor = data['net-consumption']['ph-a']['pf']
+                    net_cons_ph_a_Frequency = data['net-consumption']['ph-a']['f']
+                    net_cons_ph_b_wNow = data['net-consumption']['ph-b']['p']
+                    net_cons_ph_b_ReactPower = data['net-consumption']['ph-b']['q']
+                    net_cons_ph_b_ApprntPower = data['net-consumption']['ph-b']['s']
+                    net_cons_ph_b_rmsVoltage = data['net-consumption']['ph-b']['v']
+                    net_cons_ph_b_rmsCurrent = data['net-consumption']['ph-b']['i']
+                    net_cons_ph_b_pwrFactor = data['net-consumption']['ph-b']['pf']
+                    net_cons_ph_b_Frequency = data['net-consumption']['ph-b']['f']
+                    total_cons_ph_a_wNow = data['total-consumption']['ph-a']['p']
+                    total_cons_ph_a_ReactPower = data['total-consumption']['ph-a']['q']
+                    total_cons_ph_a_ApprntPower = data['total-consumption']['ph-a']['s']
+                    total_cons_ph_a_rmsVoltage = data['total-consumption']['ph-a']['v']
+                    total_cons_ph_a_rmsCurrent = data['total-consumption']['ph-a']['i']
+                    total_cons_ph_a_pwrFactor = data['total-consumption']['ph-a']['pf']
+                    total_cons_ph_a_Frequency = data['total-consumption']['ph-a']['f']
+                    total_cons_ph_b_wNow = data['total-consumption']['ph-b']['p']
+                    total_cons_ph_b_ReactPower = data['total-consumption']['ph-b']['q']
+                    total_cons_ph_b_ApprntPower = data['total-consumption']['ph-b']['s']
+                    total_cons_ph_b_rmsVoltage = data['total-consumption']['ph-b']['v']
+                    total_cons_ph_b_rmsCurrent = data['total-consumption']['ph-b']['i']
+                    total_cons_ph_b_pwrFactor = data['total-consumption']['ph-b']['pf']
+                    total_cons_ph_b_Frequency = data['total-consumption']['ph-b']['f']
+                    
+                    cnxn = pyodbc.connect(dsn)
+                    cursor = cnxn.cursor()
+                    cursor.execute('''
+                                    INSERT INTO <<DB NAME>>.<<SCHEMA>>.<<TABLE NAME>> VALUES 
+                                        (
+                                        ''' + str(curr_date) + '''
+                                        , ''' + str(prod_ph_a_wNow) +'''
+                                        , ''' + str(prod_ph_a_ReactPower) +'''
+                                        , ''' + str(prod_ph_a_ApprntPower) +'''
+                                        , ''' + str(prod_ph_a_rmsVoltage) +'''
+                                        , ''' + str(prod_ph_a_rmsCurrent) +'''
+                                        , ''' + str(prod_ph_a_pwrFactor) +'''
+                                        , ''' + str(prod_ph_a_Frequency) +'''
+                                        , ''' + str(prod_ph_b_wNow) +'''
+                                        , ''' + str(prod_ph_b_ReactPower) +'''
+                                        , ''' + str(prod_ph_b_ApprntPower) +'''
+                                        , ''' + str(prod_ph_b_rmsVoltage) +'''
+                                        , ''' + str(prod_ph_b_rmsCurrent) +'''
+                                        , ''' + str(prod_ph_b_pwrFactor) +'''
+                                        , ''' + str(prod_ph_b_Frequency) +'''
+                                        , ''' + str(net_cons_ph_a_wNow) +'''
+                                        , ''' + str(net_cons_ph_a_ReactPower) +'''
+                                        , ''' + str(net_cons_ph_a_ApprntPower) +'''
+                                        , ''' + str(net_cons_ph_a_rmsVoltage) +'''
+                                        , ''' + str(net_cons_ph_a_rmsCurrent) +'''
+                                        , ''' + str(net_cons_ph_a_pwrFactor) +'''
+                                        , ''' + str(net_cons_ph_a_Frequency) +'''
+                                        , ''' + str(net_cons_ph_b_wNow) +'''
+                                        , ''' + str(net_cons_ph_b_ReactPower) +'''
+                                        , ''' + str(net_cons_ph_b_ApprntPower) +'''
+                                        , ''' + str(net_cons_ph_b_rmsVoltage) +'''
+                                        , ''' + str(net_cons_ph_b_rmsCurrent) +'''
+                                        , ''' + str(net_cons_ph_b_pwrFactor) +'''
+                                        , ''' + str(net_cons_ph_b_Frequency) +'''
+                                        , ''' + str(total_cons_ph_a_wNow) +'''
+                                        , ''' + str(total_cons_ph_a_ReactPower) +'''
+                                        , ''' + str(total_cons_ph_a_ApprntPower) +'''
+                                        , ''' + str(total_cons_ph_a_rmsVoltage) +'''
+                                        , ''' + str(total_cons_ph_a_rmsCurrent) +'''
+                                        , ''' + str(total_cons_ph_a_pwrFactor) +'''
+                                        , ''' + str(total_cons_ph_a_Frequency) +'''
+                                        , ''' + str(total_cons_ph_b_wNow) +'''
+                                        , ''' + str(total_cons_ph_b_ReactPower) +'''
+                                        , ''' + str(total_cons_ph_b_ApprntPower) +'''
+                                        , ''' + str(total_cons_ph_b_rmsVoltage) +'''
+                                        , ''' + str(total_cons_ph_b_rmsCurrent) +'''
+                                        , ''' + str(total_cons_ph_b_pwrFactor) +'''
+                                        , ''' + str(total_cons_ph_b_Frequency) +'''
+                                        )'''
+                                  )
+                    cnxn.commit()
+                    
+        except requests.exceptions.RequestException as e:
+            print('Exception fetching stream data: %s' % e)
+
+def main():
+	stream_thread = threading.Thread(target=scrape_stream)
+#	stream_thread.setDaemon(True)
+	stream_thread.start()
+
+if __name__ == '__main__':
+	main()
